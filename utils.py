@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 
 
 import csv
@@ -23,6 +23,7 @@ def write_results(results, output_file):
 def check_open_port(endpoint, port=443, timeout=1):
     result = 'Open'
     try:
+        print(f"Opening socket to {endpoint}")
         socket.create_connection((endpoint, port), timeout=timeout)
     except socket.timeout:
         result = 'Timeout'
@@ -30,4 +31,8 @@ def check_open_port(endpoint, port=443, timeout=1):
         result = 'Refused'
     except socket.gaierror:
         result = 'nodename not known'
+    except Exception as ex:
+        print(ex)
+        result = 'some other error'
+    print(f"Done socket on {endpoint} with result {result}")
     return endpoint, result
