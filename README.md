@@ -54,8 +54,10 @@ Endpoints took 3.016674041748047 seconds
 
 Finally let's use `asyncio`: `socket_asyncio.py`
 
-Notice how the endpoints that timeout are at the end. We gain some speed as we
-don't wait for endpoints to timeout but we carry onto the next one.
+Notice how the endpoints that timeout are at the end. The idea here is that this
+code is more efficient resource wise because we don't rely on the OS scheduler
+> There is a lot of room for improvement so the take away here is not the actual runtime.
+
 ```
 $ time python socket_async.py
 Opening socket to google.com
