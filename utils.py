@@ -1,38 +1,52 @@
 #!/usr/bin/env python3
 
-
 import csv
-import json
 import os
-import socket
+import requests
+import zipfile
+
+
+def download_sites(sites):
+    with open(sites, 'wb') as f:
+        url = "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
+        response = requests.get(url, stream=True)
+        f.writelines(response.iter_content(1024))
+    return
+
+
+def unzip_sites():
+    sites = 'top-1m.csv'
+    download_sites(f"{sites}.zip")
+    with zipfile.ZipFile(f"{sites}.zip", 'r') as zf:
+        zf.extractall('.')
+    return
 
 
 def load_csv(filename):
+    all_sites = []
+    if not os.path.exists(filename):
+        print("Downloading site file")
+        unzip_sites()
     with open(filename, newline='') as csvfile:
         sites = csv.reader(csvfile, delimiter=',', quotechar='|')
-        all_sites = [site[1] for site in sites]
+        for site in sites:
+            try:
+                all_sites.append(site[1])
+            except IndexError:
+                pass
     return all_sites
 
 
-def write_results(results, output_file):
-    out = f'{os.path.dirname(os.path.realpath(__file__))}/{output_file}.json'
-    with open(out, 'w') as outfile:
-        json.dump(results, outfile, indent=4)
-
-
-def check_open_port(endpoint, port=443, timeout=1):
-    result = 'Open'
+def get_url(domain_name):
+    results = {}
     try:
-        print(f"Opening socket to {endpoint}")
-        socket.create_connection((endpoint, port), timeout=timeout)
-    except socket.timeout:
-        result = 'Timeout'
-    except ConnectionRefusedError:
-        result = 'Refused'
-    except socket.gaierror:
-        result = 'nodename not known'
-    except Exception as ex:
-        print(ex)
-        result = 'some other error'
-    print(f"Done socket on {endpoint} with result {result}")
-    return endpoint, result
+        response = requests.get(f"https://www.{domain_name}", timeout=3, allow_redirects=False)
+        result = response.status_code
+    except requests.exceptions.ReadTimeout:
+        result = "timeout"
+    except requests.exceptions.ConnectionError:
+        result = "connection error"
+    except Exception as e:
+        result = str(e)
+    results[domain_name] = result
+    return results

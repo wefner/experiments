@@ -1,32 +1,30 @@
 #!/usr/bin/env python3
 
-
 import os
 import concurrent.futures
 from time import time
-from utils import load_csv, write_results, check_open_port
+from utils import load_csv, get_url
 
 
-# https://docs.python.org/3/library/concurrent.futures.html#threadpoolexecutor-example
+def main(endpoints):
+    results = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(get_url, endpoint): endpoint for endpoint in endpoints}
+        for future in concurrent.futures.as_completed(futures):
+            endpoint = futures[future]
+            try:
+                results.append(future.result())
+            except Exception as exc:
+                print('%r generated an exception: %s' % (endpoint, exc))
+    return results
 
-start = time()
-results = {}
-top_sites = f'{os.path.dirname(os.path.realpath(__file__))}/top-1m.csv'
-endpoints = load_csv(top_sites)[0:100]
-max_workers = 10
 
-# We can use a with statement to ensure threads are cleaned up promptly
-with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-    # Start the load operations and mark each future with its endpoint
-    futures = {executor.submit(check_open_port, endpoint): endpoint for endpoint in endpoints}
-    for future in concurrent.futures.as_completed(futures):
-        endpoint = futures[future]
-        try:
-            data = future.result()
-            results[data[0]] = data[1]
-        except Exception as exc:
-            print('%r generated an exception: %s' % (endpoint, exc))
-
-write_results(results, 'futures')
-end = time()
-print(f"Endpoints took {end-start} seconds")
+if __name__ == '__main__':
+    top_sites = f'{os.path.dirname(os.path.realpath(__file__))}/top-1m.csv'
+    endpoints = load_csv(top_sites)
+    site_chunk = [10, 100, 500, 1000]
+    for n in site_chunk:
+        start = time()
+        results = main(endpoints[0:n])
+        end = time()
+        print(f"{n} endpoints took {end-start:.2f} seconds")
